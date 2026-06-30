@@ -16,7 +16,11 @@ import pytest
 
 from plane.bgtasks.forgot_password_task import forgot_password
 from plane.bgtasks.magic_link_code_task import magic_link
+from plane.bgtasks.project_add_user_email_task import project_add_user_email
 from plane.bgtasks.project_invitation_task import project_invitation
+from plane.bgtasks.user_activation_email_task import user_activation_email
+from plane.bgtasks.user_deactivation_email_task import user_deactivation_email
+from plane.bgtasks.user_email_update_task import send_email_update_confirmation
 from plane.bgtasks.workspace_invitation_task import workspace_invitation
 
 # A complete EMAIL_* tuple as get_email_configuration() would return it.
@@ -123,3 +127,67 @@ class TestEmailSubjectBranding:
         subject = _captured_subject(mock_email)
         _assert_branded(subject)
         assert subject == "Maryam invited you to join Apollo on Hangar"
+
+    @patch("plane.bgtasks.user_activation_email_task.EmailMultiAlternatives")
+    @patch("plane.bgtasks.user_activation_email_task.get_connection")
+    @patch("plane.bgtasks.user_activation_email_task.render_to_string", return_value="<p>hi</p>")
+    @patch(
+        "plane.bgtasks.user_activation_email_task.get_email_configuration",
+        return_value=_EMAIL_CONFIG,
+    )
+    @patch("plane.bgtasks.user_activation_email_task.User")
+    def test_user_activation_subject(self, mock_user, _cfg, _tpl, _conn, mock_email):
+        mock_user.objects.get.return_value = MagicMock(
+            first_name="Maryam", display_name="Maryam", email="m@example.com"
+        )
+        user_activation_email("http://localhost", "user-id")
+        subject = _captured_subject(mock_email)
+        _assert_branded(subject)
+        assert subject == "Maryam has been activated on Hangar"
+
+    @patch("plane.bgtasks.user_deactivation_email_task.EmailMultiAlternatives")
+    @patch("plane.bgtasks.user_deactivation_email_task.get_connection")
+    @patch("plane.bgtasks.user_deactivation_email_task.render_to_string", return_value="<p>hi</p>")
+    @patch(
+        "plane.bgtasks.user_deactivation_email_task.get_email_configuration",
+        return_value=_EMAIL_CONFIG,
+    )
+    @patch("plane.bgtasks.user_deactivation_email_task.User")
+    def test_user_deactivation_subject(self, mock_user, _cfg, _tpl, _conn, mock_email):
+        mock_user.objects.get.return_value = MagicMock(
+            first_name="Maryam", display_name="Maryam", email="m@example.com"
+        )
+        user_deactivation_email("http://localhost", "user-id")
+        subject = _captured_subject(mock_email)
+        _assert_branded(subject)
+        assert subject == "Maryam has been deactivated on Hangar"
+
+    @patch("plane.bgtasks.user_email_update_task.EmailMultiAlternatives")
+    @patch("plane.bgtasks.user_email_update_task.get_connection")
+    @patch("plane.bgtasks.user_email_update_task.render_to_string", return_value="<p>hi</p>")
+    @patch(
+        "plane.bgtasks.user_email_update_task.get_email_configuration",
+        return_value=_EMAIL_CONFIG,
+    )
+    def test_email_update_confirmation_subject(self, _cfg, _tpl, _conn, mock_email):
+        send_email_update_confirmation("ada@example.com")
+        subject = _captured_subject(mock_email)
+        _assert_branded(subject)
+        assert subject == "Hangar email address successfully updated"
+
+    @patch("plane.bgtasks.project_add_user_email_task.EmailMultiAlternatives")
+    @patch("plane.bgtasks.project_add_user_email_task.get_connection")
+    @patch("plane.bgtasks.project_add_user_email_task.render_to_string", return_value="<p>hi</p>")
+    @patch(
+        "plane.bgtasks.project_add_user_email_task.get_email_configuration",
+        return_value=_EMAIL_CONFIG,
+    )
+    @patch("plane.bgtasks.project_add_user_email_task.ProjectMember")
+    @patch("plane.bgtasks.project_add_user_email_task.User")
+    def test_project_add_user_subject(self, mock_user, mock_member, _cfg, _tpl, _conn, mock_email):
+        mock_user.objects.get.return_value = MagicMock(first_name="Maryam")
+        mock_member.objects.get.return_value = MagicMock()
+        project_add_user_email("http://localhost", "member-id", "invitor-id")
+        subject = _captured_subject(mock_email)
+        _assert_branded(subject)
+        assert subject == "You have been invited to a Hangar project"

@@ -9,24 +9,40 @@ import { TEST_USER, WORKSPACE_SLUG, STORAGE_STATE } from "./fixtures";
  */
 setup("authenticate", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("Hangar").first()).toBeVisible({ timeout: 20_000 });
 
-  // Step 1 — email
-  await page.getByRole("textbox").first().fill(TEST_USER.email);
+  // Step 1 — email. The sign-in brand is an SVG wordmark (not selectable as
+  // text), so gate on the email input being ready instead.
+  const emailInput = page.getByRole("textbox").first();
+  await expect(emailInput).toBeVisible({ timeout: 30_000 });
+  await emailInput.fill(TEST_USER.email);
   await page
     .getByRole("button", { name: /continue/i })
     .first()
     .click();
 
   // Step 2 — password
-  await page.locator('input[type="password"]').first().fill(TEST_USER.password);
+  const passwordInput = page.locator('input[type="password"]').first();
+  await expect(passwordInput).toBeVisible({ timeout: 20_000 });
+  await passwordInput.fill(TEST_USER.password);
   await page
     .getByRole("button", { name: /continue|sign in|log in/i })
     .first()
     .click();
 
-  // Land on the workspace once authenticated.
-  await page.waitForURL(new RegExp(`/${WORKSPACE_SLUG}`), { timeout: 25_000 });
+  // A successful login sets the session cookie immediately. The app's own
+  // client-side redirect to the workspace can lag well behind that, so gate on
+  // the cookie rather than racing the SPA navigation.
+  await expect
+    .poll(async () => (await page.context().cookies()).some((c) => c.name === "session-id"), {
+      timeout: 30_000,
+      message: "session-id cookie was never set — login failed",
+    })
+    .toBe(true);
+
+  // With the session established, go straight to the workspace and confirm we
+  // are authenticated (not bounced back to sign-in).
+  await page.goto(`/${WORKSPACE_SLUG}/projects/`, { waitUntil: "networkidle" });
+  await expect(page).not.toHaveURL(/sign-in/);
 
   await page.context().storageState({ path: STORAGE_STATE });
 });

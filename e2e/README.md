@@ -79,7 +79,9 @@ e2e/
 │   ├── auth.setup.ts          # logs in once, saves the authenticated state
 │   ├── branding.spec.ts       # Hangar rebrand checks (public sign-in page)
 │   ├── workspace.authed.spec.ts  # workspace shell loads for a logged-in user
-│   └── project.authed.spec.ts    # create a project, then a work item in it
+│   ├── project.authed.spec.ts    # create a project, then a work item in it
+│   ├── api-token.authed.spec.ts  # token "Connect to Claude Code" (MCP) command
+│   └── help-menu.authed.spec.ts  # help popover: Plane links removed
 └── README.md
 ```
 

@@ -108,10 +108,12 @@ Guards against any Plane branding creeping back in:
 
 ### Authenticated flows (require the seeded user)
 
-| Test                                           | Asserts                                                                                       |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `workspace.authed.spec.ts` — workspace shell   | the projects page loads for a logged-in user (not the sign-in page)                           |
-| `project.authed.spec.ts` — project + work item | create a project, open it, create a work item, see the success toast and the item in the list |
+| Test                                           | Asserts                                                                                                                                                   |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workspace.authed.spec.ts` — workspace shell   | the projects page loads for a logged-in user (not the sign-in page)                                                                                       |
+| `project.authed.spec.ts` — project + work item | create a project, open it, create a work item, see the success toast and the item in the list                                                             |
+| `api-token.authed.spec.ts` — Connect to Claude | generating a personal access token surfaces the MCP "Connect to Claude Code" command (`claude mcp add hangar …`) built from the current workspace         |
+| `help-menu.authed.spec.ts` — Plane links gone  | the help popover keeps Keyboard shortcuts / What's new? and drops Documentation, Report a bug, Forum, and `forum.plane.so` / `github.com/makeplane` links |
 
 ## Adding a new test
 

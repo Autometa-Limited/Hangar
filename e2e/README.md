@@ -30,6 +30,29 @@ npm install                     # installs @playwright/test
 npx playwright install chromium # downloads the Chromium browser
 ```
 
+## Seeding the test user
+
+The **authenticated** tests log in as a seeded local user. Create it once against
+the dev database with the helper script (idempotent — safe to re-run):
+
+```bash
+# from the repo root
+docker exec -i project-management-setup-api-1 \
+    python manage.py shell < e2e/seed-test-user.py
+```
+
+It creates:
+
+| Field     | Value                                               |
+| --------- | --------------------------------------------------- |
+| email     | `e2e-tester@hangar.test`                            |
+| password  | `E2eTest!Pass2026`                                  |
+| workspace | `e2e-workspace` ("E2E Workspace"), admin, onboarded |
+
+These match the defaults in `tests/fixtures.ts`. Override them via the `E2E_EMAIL`,
+`E2E_PASSWORD`, and `E2E_WORKSPACE_SLUG` environment variables (and edit the script
+to match) if you need different credentials.
+
 ## Running the tests
 
 ```bash
@@ -48,18 +71,31 @@ BASE_URL=http://localhost:3000 npm test
 
 ```
 e2e/
-├── package.json          # isolated deps + npm scripts
-├── playwright.config.ts  # baseURL, timeouts, chromium project
+├── package.json               # isolated deps + npm scripts
+├── playwright.config.ts       # baseURL, timeouts, projects (setup/branding/authed)
+├── seed-test-user.py          # creates the seeded user/workspace for authed tests
 ├── tests/
-│   └── branding.spec.ts  # Hangar rebrand checks (sign-in page)
+│   ├── fixtures.ts            # shared test user / workspace slug / storage-state path
+│   ├── auth.setup.ts          # logs in once, saves the authenticated state
+│   ├── branding.spec.ts       # Hangar rebrand checks (public sign-in page)
+│   ├── workspace.authed.spec.ts  # workspace shell loads for a logged-in user
+│   └── project.authed.spec.ts    # create a project, then a work item in it
 └── README.md
 ```
 
+The suite is split into three Playwright **projects**:
+
+- **setup** — runs `auth.setup.ts` once and saves the logged-in browser state.
+- **branding** — public sign-in checks, no auth.
+- **authed** — logged-in flows that reuse the saved state (depend on `setup`).
+
+Run a subset with `--project`, e.g. `npx playwright test --project=branding`.
+
 ## What is covered
 
-`tests/branding.spec.ts` runs against the **public sign-in page** (no login
-required) and asserts the Hangar rebrand, guarding against any Plane branding
-creeping back in:
+### Branding — `tests/branding.spec.ts` (public sign-in page, no login)
+
+Guards against any Plane branding creeping back in:
 
 | Test                                      | Asserts                                                          |
 | ----------------------------------------- | ---------------------------------------------------------------- |
@@ -69,6 +105,13 @@ creeping back in:
 | no Terms of Service / Privacy Policy line | the removed legal copy is absent                                 |
 | no '10,000+ teams' marketing footer       | the removed marketing footer is absent                           |
 | favicon is the Hangar SVG                 | `<link rel="icon" type="image/svg+xml">` points to `favicon.svg` |
+
+### Authenticated flows (require the seeded user)
+
+| Test                                           | Asserts                                                                                       |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `workspace.authed.spec.ts` — workspace shell   | the projects page loads for a logged-in user (not the sign-in page)                           |
+| `project.authed.spec.ts` — project + work item | create a project, open it, create a work item, see the success toast and the item in the list |
 
 ## Adding a new test
 

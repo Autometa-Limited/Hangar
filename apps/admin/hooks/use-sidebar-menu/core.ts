@@ -4,13 +4,13 @@
  * See the LICENSE file for details.
  */
 
-import { Image, BrainCog, Cog, Mail } from "lucide-react";
+import { Image, BrainCog, Cog } from "lucide-react";
 // plane imports
 import { LockIcon, WorkspaceIcon } from "@plane/propel/icons";
 // types
 import type { TSidebarMenuItem } from "./types";
 
-export type TCoreSidebarMenuKey = "general" | "email" | "workspace" | "authentication" | "ai" | "image";
+export type TCoreSidebarMenuKey = "general" | "workspace" | "authentication" | "ai" | "image";
 
 export const coreSidebarMenuLinks: Record<TCoreSidebarMenuKey, TSidebarMenuItem> = {
   general: {
@@ -18,12 +18,6 @@ export const coreSidebarMenuLinks: Record<TCoreSidebarMenuKey, TSidebarMenuItem>
     name: "General",
     description: "Identify your instances and get key details.",
     href: `/general/`,
-  },
-  email: {
-    Icon: Mail,
-    name: "Email",
-    description: "Configure your SMTP controls.",
-    href: `/email/`,
   },
   workspace: {
     Icon: WorkspaceIcon,

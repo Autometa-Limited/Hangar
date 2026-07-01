@@ -158,8 +158,13 @@ def get_llm_response(task, prompt, api_key: str, model: str, provider: str) -> T
         provider_cls = SUPPORTED_PROVIDERS.get(provider.lower())
         base_url = os.environ.get("LLM_BASE_URL") or (provider_cls.base_url if provider_cls else None)
         client = OpenAI(api_key=api_key, base_url=base_url)
+        # Cap output tokens: editor assists (descriptions, rephrase) are short,
+        # and an unbounded request reserves the model's full context, which can
+        # trip credit limits on metered gateways like OpenRouter.
         chat_completion = client.chat.completions.create(
-            model=model, messages=[{"role": "user", "content": final_text}]
+            model=model,
+            messages=[{"role": "user", "content": final_text}],
+            max_tokens=1024,
         )
         text = chat_completion.choices[0].message.content
         return text, None

@@ -7,6 +7,7 @@
 import Script from "next/script";
 
 // styles
+// eslint-disable-next-line import/no-unassigned-import
 import "@/styles/globals.css";
 
 import { SITE_DESCRIPTION, SITE_NAME } from "@plane/constants";
@@ -20,6 +21,7 @@ import favicon32 from "@/app/assets/favicon/favicon-32x32.png?url";
 import faviconIco from "@/app/assets/favicon/favicon.ico?url";
 import icon180 from "@/app/assets/icons/icon-180x180.png?url";
 import icon512 from "@/app/assets/icons/icon-512x512.png?url";
+import ogImage from "@/app/assets/og-image.png?url";
 
 // local
 import { AppProvider } from "./provider";
@@ -42,14 +44,12 @@ export const meta = () => [
     property: "og:description",
     content: "Open-source project management tool to manage work items, cycles, and product roadmaps easily",
   },
-  { property: "og:url", content: "https://app.plane.so/" },
-  { property: "og:image", content: "https://app.plane.so/og-image.png" },
+  { property: "og:image", content: ogImage },
   { property: "og:image:width", content: "1200" },
   { property: "og:image:height", content: "630" },
   { property: "og:image:alt", content: "Hangar - Modern project management" },
-  { name: "twitter:site", content: "@planepowers" },
   { name: "twitter:card", content: "summary_large_image" },
-  { name: "twitter:image", content: "https://app.plane.so/og-image.png" },
+  { name: "twitter:image", content: ogImage },
   { name: "twitter:image:width", content: "1200" },
   { name: "twitter:image:height", content: "630" },
   { name: "twitter:image:alt", content: "Hangar - Modern project management" },

@@ -57,7 +57,8 @@ test.describe("Project & work item (authenticated)", () => {
     await page.waitForURL(/\/projects\/.*\/issues/, { timeout: 30_000 });
     // Let the project context settle before opening the modal, otherwise it can
     // open at workspace scope with no project pre-selected and the save no-ops.
-    await page.waitForLoadState("networkidle");
+    // (A fixed wait, not "networkidle" — the app holds live connections open.)
+    await page.waitForTimeout(2500);
 
     // --- Create work item ---------------------------------------------------
     // Use the project-scoped CTA (not the workspace sidebar one) so the item is

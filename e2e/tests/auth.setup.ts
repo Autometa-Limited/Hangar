@@ -40,9 +40,10 @@ setup("authenticate", async ({ page }) => {
     .toBe(true);
 
   // With the session established, go straight to the workspace and confirm we
-  // are authenticated (not bounced back to sign-in).
-  await page.goto(`/${WORKSPACE_SLUG}/projects/`, { waitUntil: "networkidle" });
-  await expect(page).not.toHaveURL(/sign-in/);
+  // are authenticated (not bounced back to sign-in). Use "domcontentloaded" —
+  // the app holds live connections open, so "networkidle" never settles.
+  await page.goto(`/${WORKSPACE_SLUG}/projects/`, { waitUntil: "domcontentloaded" });
+  await expect(page).not.toHaveURL(/sign-in/, { timeout: 30_000 });
 
   await page.context().storageState({ path: STORAGE_STATE });
 });

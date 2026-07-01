@@ -29,6 +29,11 @@ class LLMProvider:
     name: str = ""
     models: List[str] = []
     default_model: str = ""
+    # OpenAI-compatible base URL; None => the OpenAI SDK default (api.openai.com).
+    base_url: str | None = None
+    # When True, skip the strict "model in models" check (open catalogs like
+    # OpenRouter expose far more models than we can enumerate here).
+    allow_any_model: bool = False
 
     @classmethod
     def get_config(cls) -> Dict[str, str | List[str]]:
@@ -66,10 +71,29 @@ class GeminiProvider(LLMProvider):
     default_model = "gemini-pro"
 
 
+class OpenRouterProvider(LLMProvider):
+    """OpenRouter — OpenAI-compatible gateway that fronts many providers,
+    including Anthropic's Claude models. Lets Hangar use Claude via the same
+    OpenAI SDK client by pointing base_url at OpenRouter."""
+
+    name = "OpenRouter"
+    models = [
+        "anthropic/claude-3.5-sonnet",
+        "anthropic/claude-3.7-sonnet",
+        "anthropic/claude-3.5-haiku",
+        "openai/gpt-4o-mini",
+        "openai/gpt-4o",
+    ]
+    default_model = "anthropic/claude-3.5-sonnet"
+    base_url = "https://openrouter.ai/api/v1"
+    allow_any_model = True
+
+
 SUPPORTED_PROVIDERS = {
     "openai": OpenAIProvider,
     "anthropic": AnthropicProvider,
     "gemini": GeminiProvider,
+    "openrouter": OpenRouterProvider,
 }
 
 
@@ -108,8 +132,8 @@ def get_llm_config() -> Tuple[str | None, str | None, str | None]:
     if not model:
         model = provider.default_model
 
-    # Validate model is supported by provider
-    if model not in provider.models:
+    # Validate model is supported by provider (open catalogs skip this)
+    if not provider.allow_any_model and model not in provider.models:
         log_exception(
             ValueError(
                 f"Model {model} not supported by {provider.name}. Supported models: {', '.join(provider.models)}"
@@ -128,7 +152,12 @@ def get_llm_response(task, prompt, api_key: str, model: str, provider: str) -> T
         if provider.lower() == "gemini":
             model = f"gemini/{model}"
 
-        client = OpenAI(api_key=api_key)
+        # Route to the provider's OpenAI-compatible endpoint (e.g. OpenRouter,
+        # which fronts Claude). LLM_BASE_URL overrides; else the provider default;
+        # else None => the OpenAI SDK's own default (api.openai.com).
+        provider_cls = SUPPORTED_PROVIDERS.get(provider.lower())
+        base_url = os.environ.get("LLM_BASE_URL") or (provider_cls.base_url if provider_cls else None)
+        client = OpenAI(api_key=api_key, base_url=base_url)
         chat_completion = client.chat.completions.create(
             model=model, messages=[{"role": "user", "content": final_text}]
         )

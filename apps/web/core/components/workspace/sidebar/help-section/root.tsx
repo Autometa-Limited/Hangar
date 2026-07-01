@@ -6,7 +6,7 @@
 
 import React, { useState } from "react";
 import { observer } from "mobx-react";
-import { HelpCircle, User } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import { useTranslation } from "@plane/i18n";
 // ui
 import { CustomMenu } from "@plane/ui";
@@ -47,13 +47,6 @@ export const HelpMenuRoot = observer(function HelpMenuRoot() {
         maxHeight="lg"
         closeOnSelect
       >
-        <CustomMenu.MenuItem onClick={() => window.open("mailto:sales@plane.so", "_blank")}>
-          <div className="flex items-center gap-x-2 rounded-sm text-11">
-            <User className="h-3.5 w-3.5 text-secondary" size={14} />
-            <span className="text-11">{t("contact_sales")}</span>
-          </div>
-        </CustomMenu.MenuItem>
-        <div className="my-1 border-t border-subtle" />
         <CustomMenu.MenuItem>
           <button
             type="button"

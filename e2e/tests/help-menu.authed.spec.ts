@@ -26,9 +26,12 @@ test.describe("Help menu — Plane links removed (authenticated)", () => {
     await expect(page.getByText(/report a bug/i)).toHaveCount(0);
     await expect(page.getByText(/forum/i)).toHaveCount(0);
     await expect(page.getByText(/discord/i)).toHaveCount(0);
+    // "Contact sales" pointed at mailto:sales@plane.so — removed with the rebrand.
+    await expect(page.getByText(/contact sales/i)).toHaveCount(0);
 
     // No links to upstream Plane properties anywhere on the page.
     await expect(page.locator('a[href*="forum.plane.so"]')).toHaveCount(0);
     await expect(page.locator('a[href*="github.com/makeplane"]')).toHaveCount(0);
+    await expect(page.locator('a[href*="plane.so"], a[href*="mailto:sales@plane.so"]')).toHaveCount(0);
   });
 });

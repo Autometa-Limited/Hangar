@@ -165,6 +165,8 @@ from .module.issue import ModuleIssueViewSet
 
 from .module.archive import ModuleArchiveUnarchiveEndpoint
 
+from .standup.base import StandupUpdateEndpoint
+
 from .api import ApiTokenEndpoint
 
 from .page.base import (

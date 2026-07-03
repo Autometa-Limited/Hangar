@@ -61,6 +61,7 @@ from .project import (
 )
 from .session import Session
 from .social_connection import SocialLoginConnection
+from .standup import StandupUpdate, StandupTask
 from .state import State, StateGroup, DEFAULT_STATES
 from .user import Account, Profile, User, BotTypeEnum
 from .view import IssueView

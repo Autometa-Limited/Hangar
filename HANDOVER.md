@@ -141,3 +141,47 @@ docker exec project-management-setup-api-1 python manage.py migrate
 cd apps/web && pnpm dev              # run
 cd apps/web && pnpm check:types      # typecheck
 ```
+
+---
+
+## 11. Notes for the next AI agent (gotchas & conventions)
+
+Read this before making changes — these are the things that cost time to learn.
+
+### Running the app from an agent shell
+- **Processes spawned from a tool shell die when the tool call ends** (job-object teardown). A foreground `pnpm dev` will not survive.
+  - Use a **background** run (persists across turns) to bring the web server up, then poll `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/` until `200`.
+  - Do **not** launch via WMI `Win32_Process.Create` — it runs in Windows session 0 and `pnpm dev` misbehaves there.
+  - For the human user, the durable path is double-clicking `start-hangar.bat` in their own desktop session.
+- **Node 22 must be on PATH:** `export PATH="/d/dev-ledger/node22:$PATH"`. `pnpm` (11.3.0) lives at `D:\dev-ledger\node22\pnpm.cmd` — NOT in `node_modules`.
+- Set `HUSKY=0` and `npm_config_verify_deps_before_run=false` for dev/commits to avoid hook/reinstall friction.
+- The API container reloads Python changes automatically (bind mount). After boot it takes ~30s before it serves 200.
+
+### Adding a BACKEND feature (Django) — the pattern (see the Standup feature as a worked example)
+1. **Model** in `apps/api/plane/db/models/<name>.py` — extend `ProjectBaseModel` (gives `project`, `workspace` auto-set on save, uuid `id`, timestamps, soft-delete `deleted_at`). Register it in `apps/api/plane/db/models/__init__.py`.
+2. **Serializer** in `apps/api/plane/app/serializers/<name>.py`, extend `BaseSerializer`; register in that package's `__init__.py`.
+3. **View** in `apps/api/plane/app/views/<name>/base.py` — `from .. import BaseAPIView` / `BaseViewSet`; gate methods with `@allow_permission(allowed_roles=[ROLE.ADMIN, ROLE.MEMBER], level="PROJECT")`. Register in `apps/api/plane/app/views/__init__.py`.
+4. **URL** in `apps/api/plane/app/urls/<name>.py`, and wire it into `apps/api/plane/app/urls/__init__.py` (both the import and the `*<name>_urls` spread).
+5. **Migration:** `docker exec project-management-setup-api-1 python manage.py makemigrations db` then `... migrate db`. `bulk_create` bypasses `save()`, so set `workspace_id` manually on ProjectBaseModel rows.
+6. **Verify at runtime** via Django shell (`manage.py shell`) — create → serialize → cleanup — because `manage.py check` won't catch serializer/method runtime errors.
+
+### Adding a FRONTEND page (React Router v7)
+- Routes are **explicit** in `apps/web/app/routes/core.ts` — add a `layout(...)` + `route(...)` entry. The `(all)`/`(detail)` folders are just grouping.
+- A route folder typically has `layout.tsx` (AppHeader + ContentWrapper + `<Outlet/>`), `page.tsx` (default export wrapped in `observer()`, params typed via `import type { Route } from "./+types/page"`), `header.tsx`, `mobile-header.tsx`. The `+types/*` are **auto-generated** by `react-router typegen` (runs inside `check:types`) — don't hand-write them.
+- **Sidebar nav:** project items live in `apps/web/core/components/workspace/sidebar/project-navigation.tsx` (`baseNavigation`). Each item needs an `i18n_key` whose value must exist in `packages/i18n/src/locales/en/navigation.json` under `sidebar` (else the raw key shows). `shouldRender` gates visibility; `sortOrder` orders it (floats like `3.5` are fine to slot between existing items).
+- **Services:** extend `APIService` (`apps/web/core/services/api.service.ts`), `super(API_BASE_URL)`, methods return `response?.data` and rethrow `error?.response?.data`.
+- **Current user:** `const { data: currentUser } = useUser();` from `@/hooks/store/user`.
+- **Charts:** use `@plane/propel/charts/{bar,area,line,pie}-chart` — do NOT import `recharts` directly. Copy an existing usage (e.g. `apps/web/core/components/analytics/work-items/priority-chart.tsx`). `TBarItem` requires `key,label,stackId,fill,textClassName`.
+- **Buttons:** `@plane/propel/button` variants are only `primary | secondary | tertiary | ghost | link | error-fill | error-outline` (there is **no** `neutral-primary`). Props include `loading`, `prependIcon`, `appendIcon`; sizes `sm|base|lg|xl`.
+- **Toasts/UI:** `import { TOAST_TYPE, setToast } from "@plane/propel/toast";`, `import { Avatar } from "@plane/ui";`.
+- **Work-item picker (reusable):** `ExistingIssuesListModal` (`@/components/core/modals/existing-issues-list-modal`) — search & multi-select issues; `handleOnSubmit(data: ISearchIssueResponse[])`.
+- **Always run `pnpm --dir apps/web check:types`** — the Vite dev server uses esbuild and does NOT type-check, so type errors only surface here.
+
+### Community-vs-Enterprise split
+- Files under `apps/web/ce/...` are Community stubs; Plane's private repo has parallel `ee/...` implementations. Seeing a name/route referenced (e.g. `wiki`, `isWikiPath`) does **not** mean the feature exists — the real code may be EE-only. Verify a route actually exists in `routes/core.ts` and a backend model/endpoint exists before assuming a feature is present.
+
+### Open items / TODO (as of this handover, 2026-07)
+- **Rotate** any leaked Gmail app password; keep `OpenRouter` credits topped up if using AI editor completions.
+- **Not built (optional future work):** workspace-level **Wiki**, **OKRs + KPI contributions** (the Standup reference screenshot showed KPI Contributions — intentionally omitted since no OKR system exists), **Retros**.
+- The Standup feature is an MVP (project-level, manual task selection). Possible follow-ups: reminders, history/trend charts, per-task status editing inline.
+

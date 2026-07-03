@@ -54,3 +54,9 @@ Hangar is a fork of [Plane](https://github.com/makeplane/plane) by Plane Softwar
 ## License
 
 This project is licensed under the [GNU Affero General Public License v3.0](./LICENSE.txt).
+
+---
+
+<p align="center">
+  <sub>Special thanks to <a href="https://plane.so">Plane (plane.so)</a> — Hangar is built on Plane's open-source codebase. © Plane Software, Inc. Original source used under the terms of the AGPL-3.0 license.</sub>
+</p>

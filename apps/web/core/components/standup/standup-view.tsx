@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { observer } from "mobx-react";
-import { CalendarDays, ListChecks, Loader2, Plus, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, ListChecks, Loader2, Plus, X } from "lucide-react";
 // plane imports
 import { BarChart } from "@plane/propel/charts/bar-chart";
 import { Button } from "@plane/propel/button";
@@ -54,6 +54,13 @@ const stateGroupClass = (group: string | null): string => {
 
 const todayISO = (): string => new Date().toISOString().slice(0, 10);
 
+// add/subtract whole days to an ISO date string (YYYY-MM-DD), timezone-safe
+const addDays = (iso: string, days: number): string => {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+};
+
 const fullName = (m: TStandupUpdate["member_detail"]): string =>
   `${m.first_name ?? ""} ${m.last_name ?? ""}`.trim() || m.display_name || m.email;
 
@@ -80,8 +87,9 @@ export const StandupView = observer(function StandupView({ workspaceSlug, projec
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [teamStandups, setTeamStandups] = useState<TStandupUpdate[]>([]);
   const [myTasks, setMyTasks] = useState<TDraftTask[]>([]);
+  const [date, setDate] = useState<string>(todayISO());
 
-  const date = todayISO();
+  const isToday = date === todayISO();
 
   const loadStandups = useCallback(async () => {
     try {
@@ -189,14 +197,48 @@ export const StandupView = observer(function StandupView({ workspaceSlug, projec
     <div className="h-full w-full overflow-y-auto">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 p-6">
         {/* header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <CalendarDays className="size-5 text-accent-primary" />
             <h2 className="text-lg font-semibold text-primary">Standup — {prettyDate}</h2>
           </div>
-          <Button variant="primary" size="sm" onClick={() => void saveStandup()} disabled={isSaving} loading={isSaving}>
-            {isSaving ? "Saving…" : "Save standup"}
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* date navigation */}
+            <div className="flex items-center gap-1 rounded-md border border-subtle bg-surface-1 p-0.5">
+              <button
+                type="button"
+                onClick={() => setDate((d) => addDays(d, -1))}
+                className="grid size-6 place-items-center rounded text-secondary hover:bg-layer-1 hover:text-primary"
+                title="Previous day"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              <input
+                type="date"
+                value={date}
+                max={todayISO()}
+                onChange={(e) => e.target.value && setDate(e.target.value)}
+                className="bg-transparent px-1 text-12 text-primary outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setDate((d) => addDays(d, 1))}
+                disabled={isToday}
+                className="grid size-6 place-items-center rounded text-secondary hover:bg-layer-1 hover:text-primary disabled:opacity-40"
+                title="Next day"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
+            {!isToday && (
+              <Button variant="tertiary" size="sm" onClick={() => setDate(todayISO())}>
+                Today
+              </Button>
+            )}
+            <Button variant="primary" size="sm" onClick={() => void saveStandup()} disabled={isSaving} loading={isSaving}>
+              {isSaving ? "Saving…" : "Save standup"}
+            </Button>
+          </div>
         </div>
 
         {/* my update */}
@@ -252,7 +294,9 @@ export const StandupView = observer(function StandupView({ workspaceSlug, projec
         {/* chart */}
         {chartData.length > 0 && (
           <div className="rounded-lg border border-subtle bg-surface-1 p-4">
-            <p className="mb-3 text-13 font-semibold text-primary">Who’s working on what today</p>
+            <p className="mb-3 text-13 font-semibold text-primary">
+              {isToday ? "Who’s working on what today" : "Who worked on what this day"}
+            </p>
             <BarChart
               className="h-[260px] w-full"
               data={chartData}
@@ -267,7 +311,7 @@ export const StandupView = observer(function StandupView({ workspaceSlug, projec
         {/* team board */}
         <div className="rounded-lg border border-subtle bg-surface-1">
           <div className="border-b border-subtle px-4 py-3 text-13 font-semibold text-primary">
-            Team standup — today ({teamStandups.length})
+            Team standup — {isToday ? "today" : prettyDate} ({teamStandups.length})
           </div>
           <div className="divide-y divide-subtle">
             {teamStandups.length === 0 && (

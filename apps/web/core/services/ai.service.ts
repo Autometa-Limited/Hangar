@@ -46,16 +46,4 @@ export class AIService extends APIService {
         throw error?.response?.data;
       });
   }
-
-  /**
-   * "Ask AI for help" — answers how-to / what-do-I-do-next questions about using
-   * Hangar, grounded in the app's own features. Returns the assistant's reply.
-   */
-  async askHelp(workspaceSlug: string, question: string): Promise<{ response: string; response_html: string }> {
-    return this.post(`/api/workspaces/${workspaceSlug}/ai-help/`, { question })
-      .then((res) => res?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
 }

@@ -5,7 +5,6 @@
  */
 
 import { Outlet } from "react-router";
-import { AiHelpWidget } from "@/components/ai/ai-help-widget";
 import { AuthenticationWrapper } from "@/lib/wrappers/authentication-wrapper";
 import { WorkspaceContentWrapper } from "@/plane-web/components/workspace/content-wrapper";
 import { AppRailVisibilityProvider } from "@/lib/app-rail";
@@ -22,7 +21,6 @@ export default function WorkspaceLayout(props: Route.ComponentProps) {
         <AppRailVisibilityProvider>
           <WorkspaceContentWrapper>
             <GlobalModals workspaceSlug={workspaceSlug} />
-            <AiHelpWidget workspaceSlug={workspaceSlug} />
             <Outlet />
           </WorkspaceContentWrapper>
         </AppRailVisibilityProvider>

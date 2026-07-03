@@ -246,59 +246,6 @@ class WorkspaceGPTIntegrationEndpoint(BaseAPIView):
         )
 
 
-HANGAR_HELP_CONTEXT = (
-    "You are the in-app help assistant for Hangar, an open-source project "
-    "management tool. Answer the user's question briefly and practically — as a "
-    "short numbered list of steps when possible — based only on how Hangar works:\n"
-    "- Hierarchy: Workspace > Projects > Work items (issues). A project also has "
-    "Cycles (sprints), Modules (features), Views (saved filters) and Pages (docs).\n"
-    "- Work-item states are grouped: Backlog > Todo (Unstarted) > In Progress "
-    "(Started) > Done (Completed) / Cancelled. Change an item's state from its "
-    "state dropdown, or drag its card between columns on the Board (Kanban) layout.\n"
-    "- New project: sidebar Projects > +, give a Name and a short Identifier.\n"
-    "- New work item: open a project > 'Create work item'; set title, assignee, "
-    "priority, labels, dates, and optionally a Cycle or Module.\n"
-    "- Cycles are time-boxed sprints (start/end dates); add work items to plan one.\n"
-    "- Modules group related work items under a feature/epic.\n"
-    "- Views save a filter + layout (List, Board, Calendar, Spreadsheet, Gantt).\n"
-    "- Pages are rich-text docs inside a project.\n"
-    "- If a Cycles/Modules/Views/Pages tab is missing, enable it in the project's "
-    "Settings > Features.\n"
-    "Keep answers concise. If the question is not about using Hangar, say you can "
-    "only help with using Hangar."
-)
-
-
-class AIHelpEndpoint(BaseAPIView):
-    """In-app "stuck? ask AI" helper: answers how-to / next-step questions about
-    using Hangar, grounded in the app's own features (not free-form chat)."""
-
-    @allow_permission(allowed_roles=[ROLE.ADMIN, ROLE.MEMBER], level="WORKSPACE")
-    def post(self, request, slug):
-        api_key, model, provider = get_llm_config()
-        if not api_key or not model or not provider:
-            return Response(
-                {"error": "AI is not configured for this instance."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        question = request.data.get("question")
-        if not question:
-            return Response({"error": "A question is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        text, error = get_llm_response(HANGAR_HELP_CONTEXT, question, api_key, model, provider)
-        if not text and error:
-            return Response(
-                {"error": "An internal error has occurred."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-        return Response(
-            {"response": text, "response_html": text.replace("\n", "<br/>")},
-            status=status.HTTP_200_OK,
-        )
-
-
 class UnsplashEndpoint(BaseAPIView):
     def get(self, request):
         (UNSPLASH_ACCESS_KEY,) = get_configuration_value(

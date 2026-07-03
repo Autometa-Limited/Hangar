@@ -180,7 +180,6 @@ from .search.issue import IssueSearchEndpoint
 
 
 from .external.base import (
-    AIHelpEndpoint,
     GPTIntegrationEndpoint,
     UnsplashEndpoint,
     WorkspaceGPTIntegrationEndpoint,

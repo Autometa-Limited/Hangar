@@ -53,7 +53,10 @@ def get_email_configuration():
             {"key": "EMAIL_USE_SSL", "default": os.environ.get("EMAIL_USE_SSL", "0")},
             {
                 "key": "EMAIL_FROM",
-                "default": os.environ.get("EMAIL_FROM", "Team Plane <team@mailer.plane.so>"),
+                # Fallback only — production overrides via the EMAIL_FROM env var /
+                # instance configuration. Kept Hangar-branded so unconfigured
+                # deployments never send as "Team Plane".
+                "default": os.environ.get("EMAIL_FROM", "Team Hangar <team@mailer.hangar.app>"),
             },
         ]
     )

@@ -12,21 +12,20 @@ SPECTACULAR_SETTINGS = {
     # ========================================================================
     # Basic API Information
     # ========================================================================
-    "TITLE": "The Plane REST API",
+    "TITLE": "The Hangar REST API",
     "DESCRIPTION": (
-        "The Plane REST API\n\n"
-        "Visit our quick start guide and full API documentation at "
-        "[developers.plane.so](https://developers.plane.so/api-reference/introduction)."
+        "The Hangar REST API\n\n"
+        "Hangar is an open-source project management tool. Browse the source and "
+        "documentation on [GitHub](https://github.com/Autometa-Limited/Hangar)."
     ),
     "CONTACT": {
-        "name": "Plane",
-        "url": "https://plane.so",
-        "email": "support@plane.so",
+        "name": "Hangar",
+        "url": "https://github.com/Autometa-Limited/Hangar",
     },
     "VERSION": "0.0.1",
     "LICENSE": {
         "name": "GNU AGPLv3",
-        "url": "https://github.com/makeplane/plane/blob/preview/LICENSE.txt",
+        "url": "https://github.com/Autometa-Limited/Hangar/blob/preview/LICENSE.txt",
     },
     # ========================================================================
     # Schema Generation Settings
@@ -43,9 +42,11 @@ SPECTACULAR_SETTINGS = {
     # ========================================================================
     # Server Configuration
     # ========================================================================
+    # Self-hosted deployments have no shared production host, so only the local
+    # server is advertised. Set your own host here (or via the API_BASE_URL env)
+    # when publishing the docs for a deployed instance.
     "SERVERS": [
         {"url": "http://localhost:8000", "description": "Local"},
-        {"url": "https://api.plane.so", "description": "Production"},
     ],
     # ========================================================================
     # API Tag Definitions

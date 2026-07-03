@@ -29,6 +29,11 @@ class LLMProvider:
     name: str = ""
     models: List[str] = []
     default_model: str = ""
+    # OpenAI-compatible base URL; None => the OpenAI SDK default (api.openai.com).
+    base_url: str | None = None
+    # When True, skip the strict "model in models" check (open catalogs like
+    # OpenRouter expose far more models than we can enumerate here).
+    allow_any_model: bool = False
 
     @classmethod
     def get_config(cls) -> Dict[str, str | List[str]]:
@@ -66,10 +71,29 @@ class GeminiProvider(LLMProvider):
     default_model = "gemini-pro"
 
 
+class OpenRouterProvider(LLMProvider):
+    """OpenRouter — OpenAI-compatible gateway that fronts many providers,
+    including Anthropic's Claude models. Lets Hangar use Claude via the same
+    OpenAI SDK client by pointing base_url at OpenRouter."""
+
+    name = "OpenRouter"
+    models = [
+        "anthropic/claude-3.5-sonnet",
+        "anthropic/claude-3.7-sonnet",
+        "anthropic/claude-3.5-haiku",
+        "openai/gpt-4o-mini",
+        "openai/gpt-4o",
+    ]
+    default_model = "anthropic/claude-3.5-sonnet"
+    base_url = "https://openrouter.ai/api/v1"
+    allow_any_model = True
+
+
 SUPPORTED_PROVIDERS = {
     "openai": OpenAIProvider,
     "anthropic": AnthropicProvider,
     "gemini": GeminiProvider,
+    "openrouter": OpenRouterProvider,
 }
 
 
@@ -108,8 +132,8 @@ def get_llm_config() -> Tuple[str | None, str | None, str | None]:
     if not model:
         model = provider.default_model
 
-    # Validate model is supported by provider
-    if model not in provider.models:
+    # Validate model is supported by provider (open catalogs skip this)
+    if not provider.allow_any_model and model not in provider.models:
         log_exception(
             ValueError(
                 f"Model {model} not supported by {provider.name}. Supported models: {', '.join(provider.models)}"
@@ -128,9 +152,19 @@ def get_llm_response(task, prompt, api_key: str, model: str, provider: str) -> T
         if provider.lower() == "gemini":
             model = f"gemini/{model}"
 
-        client = OpenAI(api_key=api_key)
+        # Route to the provider's OpenAI-compatible endpoint (e.g. OpenRouter,
+        # which fronts Claude). LLM_BASE_URL overrides; else the provider default;
+        # else None => the OpenAI SDK's own default (api.openai.com).
+        provider_cls = SUPPORTED_PROVIDERS.get(provider.lower())
+        base_url = os.environ.get("LLM_BASE_URL") or (provider_cls.base_url if provider_cls else None)
+        client = OpenAI(api_key=api_key, base_url=base_url)
+        # Cap output tokens: editor assists (descriptions, rephrase) are short,
+        # and an unbounded request reserves the model's full context, which can
+        # trip credit limits on metered gateways like OpenRouter.
         chat_completion = client.chat.completions.create(
-            model=model, messages=[{"role": "user", "content": final_text}]
+            model=model,
+            messages=[{"role": "user", "content": final_text}],
+            max_tokens=1024,
         )
         text = chat_completion.choices[0].message.content
         return text, None
@@ -208,6 +242,59 @@ class WorkspaceGPTIntegrationEndpoint(BaseAPIView):
                 "response": text,
                 "response_html": text.replace("\n", "<br/>"),
             },
+            status=status.HTTP_200_OK,
+        )
+
+
+HANGAR_HELP_CONTEXT = (
+    "You are the in-app help assistant for Hangar, an open-source project "
+    "management tool. Answer the user's question briefly and practically — as a "
+    "short numbered list of steps when possible — based only on how Hangar works:\n"
+    "- Hierarchy: Workspace > Projects > Work items (issues). A project also has "
+    "Cycles (sprints), Modules (features), Views (saved filters) and Pages (docs).\n"
+    "- Work-item states are grouped: Backlog > Todo (Unstarted) > In Progress "
+    "(Started) > Done (Completed) / Cancelled. Change an item's state from its "
+    "state dropdown, or drag its card between columns on the Board (Kanban) layout.\n"
+    "- New project: sidebar Projects > +, give a Name and a short Identifier.\n"
+    "- New work item: open a project > 'Create work item'; set title, assignee, "
+    "priority, labels, dates, and optionally a Cycle or Module.\n"
+    "- Cycles are time-boxed sprints (start/end dates); add work items to plan one.\n"
+    "- Modules group related work items under a feature/epic.\n"
+    "- Views save a filter + layout (List, Board, Calendar, Spreadsheet, Gantt).\n"
+    "- Pages are rich-text docs inside a project.\n"
+    "- If a Cycles/Modules/Views/Pages tab is missing, enable it in the project's "
+    "Settings > Features.\n"
+    "Keep answers concise. If the question is not about using Hangar, say you can "
+    "only help with using Hangar."
+)
+
+
+class AIHelpEndpoint(BaseAPIView):
+    """In-app "stuck? ask AI" helper: answers how-to / next-step questions about
+    using Hangar, grounded in the app's own features (not free-form chat)."""
+
+    @allow_permission(allowed_roles=[ROLE.ADMIN, ROLE.MEMBER], level="WORKSPACE")
+    def post(self, request, slug):
+        api_key, model, provider = get_llm_config()
+        if not api_key or not model or not provider:
+            return Response(
+                {"error": "AI is not configured for this instance."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        question = request.data.get("question")
+        if not question:
+            return Response({"error": "A question is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        text, error = get_llm_response(HANGAR_HELP_CONTEXT, question, api_key, model, provider)
+        if not text and error:
+            return Response(
+                {"error": "An internal error has occurred."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            {"response": text, "response_html": text.replace("\n", "<br/>")},
             status=status.HTTP_200_OK,
         )
 

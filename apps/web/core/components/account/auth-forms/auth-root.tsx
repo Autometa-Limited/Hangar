@@ -48,10 +48,14 @@ export const AuthRoot = observer(function AuthRoot(props: TAuthRoot) {
   // store hooks
   const { config } = useInstance();
   // derived values
-  const oAuthActionText = authMode === EAuthModes.SIGN_UP ? "Sign up" : "Sign in";
+  const isSignUp = authMode === EAuthModes.SIGN_UP;
+  const oAuthActionText = isSignUp ? "Sign up" : "Sign in";
   const { isOAuthEnabled, oAuthOptions } = useOAuthConfig(oAuthActionText);
   const isEmailBasedAuthEnabled = config?.is_email_password_enabled || config?.is_magic_login_enabled;
-  const noAuthMethodsAvailable = !isOAuthEnabled && !isEmailBasedAuthEnabled;
+  // Sign-up is OAuth-only (Google): the email/password + magic-link form is hidden
+  // on sign-up so new accounts are created through OAuth. Sign-in is unaffected.
+  const showEmailBasedAuth = isEmailBasedAuthEnabled && !isSignUp;
+  const noAuthMethodsAvailable = !isOAuthEnabled && !showEmailBasedAuth;
 
   useEffect(() => {
     if (!authMode && currentAuthMode) setAuthMode(currentAuthMode);
@@ -128,18 +132,18 @@ export const AuthRoot = observer(function AuthRoot(props: TAuthRoot) {
         <OAuthOptions
           options={oAuthOptions}
           compact={authStep === EAuthSteps.PASSWORD}
-          showDivider={isEmailBasedAuthEnabled}
+          showDivider={showEmailBasedAuth}
         />
       )}
-      {isEmailBasedAuthEnabled && (
+      {showEmailBasedAuth && (
         <AuthFormRoot
           authStep={authStep}
           authMode={authMode}
           email={email}
-          setEmail={(email) => setEmail(email)}
-          setAuthMode={(authMode) => setAuthMode(authMode)}
-          setAuthStep={(authStep) => setAuthStep(authStep)}
-          setErrorInfo={(errorInfo) => setErrorInfo(errorInfo)}
+          setEmail={setEmail}
+          setAuthMode={setAuthMode}
+          setAuthStep={setAuthStep}
+          setErrorInfo={setErrorInfo}
           currentAuthMode={currentAuthMode}
         />
       )}

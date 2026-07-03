@@ -1,0 +1,14 @@
+{
+  "name": "hangar-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "End-to-end (Playwright) tests for Hangar — isolated from the pnpm workspace.",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1"
+  }
+}
